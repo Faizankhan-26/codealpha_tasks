@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Handwritten Digit Recognition</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <div class="icon">
+            ✍️
+        </div>
+
+        <h1>
+            Handwritten Digit Recognition
+        </h1>
+
+        <p>
+            Upload an image or draw a digit and let
+            our CNN model recognize it.
+        </p>
+
+    </div>
+
+
+    <!-- MAIN CARD -->
+
+    <div class="card">
+
+
+        <!-- ============================= -->
+        <!-- IMAGE UPLOAD -->
+        <!-- ============================= -->
+
+        <div class="section-title">
+
+            <span>01</span>
+
+            Upload Handwritten Image
+
+        </div>
+
+
+        <form action="/predict"
+              method="POST"
+              enctype="multipart/form-data">
+
+
+            <label for="image"
+                   class="upload-box">
+
+                <div class="upload-icon">
+                    📁
+                </div>
+
+                <h2>
+                    Select Handwritten Image
+                </h2>
+
+                <p>
+                    Click here to choose an image
+                </p>
+
+                <span>
+                    PNG, JPG or JPEG
+                </span>
+
+            </label>
+
+
+            <input
+                type="file"
+                id="image"
+                name="image"
+                accept=".png,.jpg,.jpeg"
+                required
+            >
+
+
+            <!-- IMAGE PREVIEW -->
+
+            <div id="preview-container">
+
+                <p class="preview-title">
+                    Image Preview
+                </p>
+
+                <img
+                    id="preview"
+                    alt="Image Preview"
+                >
+
+            </div>
+
+
+            <button type="submit">
+
+                🔍 Predict Uploaded Digit
+
+            </button>
+
+        </form>
+
+
+        <!-- DIVIDER -->
+
+        <div class="divider">
+
+            <span>OR</span>
+
+        </div>
+
+
+        <!-- ============================= -->
+        <!-- DRAWING CANVAS -->
+        <!-- ============================= -->
+
+        <div class="section-title">
+
+            <span>02</span>
+
+            Draw Your Digit
+
+        </div>
+
+
+        <p class="draw-instruction">
+
+            Use your mouse or trackpad to draw a digit
+            from 0 to 9 inside the box.
+
+        </p>
+
+
+        <div class="canvas-wrapper">
+
+            <canvas
+                id="drawingCanvas"
+                width="280"
+                height="280">
+            </canvas>
+
+        </div>
+
+
+        <!-- DRAWING BUTTONS -->
+
+        <div class="canvas-buttons">
+
+            <button
+                type="button"
+                class="clear-btn"
+                onclick="clearCanvas()">
+
+                🗑️ Clear
+
+            </button>
+
+
+            <button
+                type="button"
+                onclick="predictDrawing()">
+
+                🔍 Predict Drawing
+
+            </button>
+
+        </div>
+
+
+        <!-- HIDDEN DRAWING FORM -->
+
+        <form
+            id="drawingForm"
+            action="/predict-drawing"
+            method="POST">
+
+            <input
+                type="hidden"
+                id="drawingData"
+                name="drawing"
+            >
+
+        </form>
+
+
+        <!-- ERROR -->
+
+        {% if error %}
+
+        <div class="error-box">
+
+            ⚠️ {{ error }}
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- RESULT -->
+
+        {% if prediction is not none %}
+
+        <div class="result-box">
+
+            <p class="result-title">
+                Prediction Result
+            </p>
+
+
+            <div class="digit">
+
+                {{ prediction }}
+
+            </div>
+
+
+            <p class="method">
+
+                Method: {{ method }}
+
+            </p>
+
+
+            <p class="confidence-label">
+
+                Model Confidence
+
+            </p>
+
+
+            <div class="confidence">
+
+                <div class="confidence-bar">
+
+                    <div
+                        class="confidence-fill"
+                        style="width: {{ confidence }}%;">
+                    </div>
+
+                </div>
+
+
+                <strong>
+
+                    {{ confidence }}%
+
+                </strong>
+
+            </div>
+
+
+            <p class="success-message">
+
+                ✓ The CNN model successfully recognized
+                your handwritten digit.
+
+            </p>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- INFO CARDS -->
+
+    <div class="info-section">
+
+
+        <div class="info-card">
+
+            <div class="info-icon">
+                🧠
+            </div>
+
+            <h3>
+                CNN Model
+            </h3>
+
+            <p>
+                Convolutional Neural Network trained
+                on the MNIST dataset.
+            </p>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <div class="info-icon">
+                🔢
+            </div>
+
+            <h3>
+                Digits 0–9
+            </h3>
+
+            <p>
+                The model recognizes handwritten
+                digits from zero to nine.
+            </p>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <div class="info-icon">
+                ⚡
+            </div>
+
+            <h3>
+                Fast Prediction
+            </h3>
+
+            <p>
+                Get a prediction and confidence
+                score within seconds.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- FOOTER -->
+
+    <footer>
+
+        <p>
+
+            Handwritten Character Recognition
+
+            <span>•</span>
+
+            CNN + MNIST
+
+        </p>
+
+    </footer>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- JAVASCRIPT -->
+<!-- ========================================= -->
+
+<script>
+
+
+// ==========================================================
+// IMAGE PREVIEW
+// ==========================================================
+
+const imageInput =
+    document.getElementById("image");
+
+const preview =
+    document.getElementById("preview");
+
+const previewContainer =
+    document.getElementById("preview-container");
+
+
+imageInput.addEventListener(
+    "change",
+    function () {
+
+        const file = this.files[0];
+
+        if (file) {
+
+            const reader =
+                new FileReader();
+
+            reader.onload =
+                function (event) {
+
+                    preview.src =
+                        event.target.result;
+
+                    previewContainer.style.display =
+                        "block";
+
+                };
+
+            reader.readAsDataURL(file);
+
+        }
+
+    }
+);
+
+
+// ==========================================================
+// DRAWING CANVAS
+// ==========================================================
+
+const canvas =
+    document.getElementById(
+        "drawingCanvas"
+    );
+
+const ctx =
+    canvas.getContext("2d");
+
+
+let drawing = false;
+
+
+// Black background
+
+ctx.fillStyle = "black";
+
+ctx.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+);
+
+
+// White drawing
+
+ctx.strokeStyle = "white";
+
+ctx.lineWidth = 20;
+
+ctx.lineCap = "round";
+
+ctx.lineJoin = "round";
+
+
+// ==========================================================
+// MOUSE EVENTS
+// ==========================================================
+
+canvas.addEventListener(
+    "mousedown",
+    startDrawing
+);
+
+canvas.addEventListener(
+    "mousemove",
+    draw
+);
+
+canvas.addEventListener(
+    "mouseup",
+    stopDrawing
+);
+
+canvas.addEventListener(
+    "mouseleave",
+    stopDrawing
+);
+
+
+// ==========================================================
+// TOUCH EVENTS
+// ==========================================================
+
+canvas.addEventListener(
+    "touchstart",
+    function (event) {
+
+        event.preventDefault();
+
+        const touch =
+            event.touches[0];
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+        const x =
+            touch.clientX - rect.left;
+
+        const y =
+            touch.clientY - rect.top;
+
+        drawing = true;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            x,
+            y
+        );
+
+    }
+);
+
+
+canvas.addEventListener(
+    "touchmove",
+    function (event) {
+
+        event.preventDefault();
+
+        if (!drawing) return;
+
+        const touch =
+            event.touches[0];
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+        const x =
+            touch.clientX - rect.left;
+
+        const y =
+            touch.clientY - rect.top;
+
+        ctx.lineTo(
+            x,
+            y
+        );
+
+        ctx.stroke();
+
+    }
+);
+
+
+canvas.addEventListener(
+    "touchend",
+    stopDrawing
+);
+
+
+// ==========================================================
+// DRAWING FUNCTIONS
+// ==========================================================
+
+function startDrawing(event) {
+
+    drawing = true;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        event.offsetX,
+        event.offsetY
+    );
+}
+
+
+function draw(event) {
+
+    if (!drawing) return;
+
+    ctx.lineTo(
+        event.offsetX,
+        event.offsetY
+    );
+
+    ctx.stroke();
+}
+
+
+function stopDrawing() {
+
+    drawing = false;
+
+    ctx.closePath();
+}
+
+
+// ==========================================================
+// CLEAR CANVAS
+// ==========================================================
+
+function clearCanvas() {
+
+    ctx.fillStyle = "black";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    ctx.strokeStyle = "white";
+
+    ctx.lineWidth = 20;
+
+}
+
+
+// ==========================================================
+// PREDICT DRAWING
+// ==========================================================
+
+function predictDrawing() {
+
+    const imageData =
+        canvas.toDataURL(
+            "image/png"
+        );
+
+    document.getElementById(
+        "drawingData"
+    ).value = imageData;
+
+    document.getElementById(
+        "drawingForm"
+    ).submit();
+
+}
+
+</script>
+
+
+</body>
+
+</html>
