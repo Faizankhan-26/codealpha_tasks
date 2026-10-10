@@ -238,11 +238,11 @@ python app.py
 
 
 
-Open the local URL displayed in the terminal, commonly:
+Open the URL displayed in the terminal, commonly:
 
 
 
-http://127.0.0.1:5000/
+https://codealpha-smart-credit-scoring-6pr1.onrender.com
 
 
 
